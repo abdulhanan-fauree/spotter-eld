@@ -1,0 +1,16 @@
+# Upload filter. Distinct from vercel.json's excludeFiles, which trims the
+# function bundle after upload — this stops the bytes leaving the machine.
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Vercel installs from requirements.txt; the local SQLite file and the test
+# suite have no place in a serverless bundle.
+db.sqlite3
+db.sqlite3-*
+tests/
+
+.env
+.env.*
+!.env.example

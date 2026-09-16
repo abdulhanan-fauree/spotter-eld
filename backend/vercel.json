@@ -1,14 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-
-  "//": "Vercel detects Django from manage.py and resolves the entrypoint from WSGI_APPLICATION (config.wsgi.application), so no shim file is needed. Migrations run at build because a serverless function must not mutate schema on a request path.",
-
-  "buildCommand": "python manage.py migrate --noinput",
-
-  "functions": {
-    "config/wsgi.py": {
-      "maxDuration": 60,
-      "excludeFiles": "{tests/**,**/test_*.py,.pytest_cache/**,db.sqlite3,.venv/**}"
-    }
-  }
+  "buildCommand": "python manage.py migrate --noinput"
 }

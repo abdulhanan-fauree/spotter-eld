@@ -26,3 +26,9 @@ htmlcov/
 
 # macOS
 .DS_Store
+.vercel
+.env*
+
+# Keep the committed template — must stay after the .env* rule above, since
+# later patterns win and `vercel link` appends its own .env* line here.
+!.env.example
