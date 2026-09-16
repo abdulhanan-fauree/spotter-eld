@@ -1,5 +1,35 @@
 # Deploying — both halves on Vercel (Hobby / free)
 
+> **Live:** frontend <https://spotter-eld-web.vercel.app> · API
+> <https://spotter-eld-api-cyan.vercel.app> · Postgres by Neon.
+> Verified end to end: a planned trip persists across separate GETs.
+
+## Gotchas found while doing this for real
+
+1. **`vercel.json` rejects a `"//"` comment key.** Schema validation fails the
+   whole deploy. There is no comment syntax — keep notes out of the file.
+2. **Projects created with `vercel project add` have `framework: null`.** Vercel
+   then treats a Django app as a static site and fails with *No Output Directory
+   named "public"*. Framework auto-detection only runs on dashboard Git import.
+   Fix without the dashboard:
+   ```bash
+   curl -X PATCH -H "Authorization: Bearer $VERCEL_TOKEN" \
+     -H "Content-Type: application/json" -d '{"framework":"django"}' \
+     "https://api.vercel.com/v9/projects/<project>?teamId=<team>"
+   ```
+   The SPA project needs `{"framework":"vite"}` for the same reason.
+3. **Environment variables do nothing until you redeploy.** `vercel env add`
+   only stores the value; the running bundle keeps the old environment. This
+   silently breaks CORS in a way that looks like a frontend bug — `curl`
+   succeeds while the browser blocks the response, because
+   `access-control-allow-origin` is simply absent.
+4. **`.vercelignore` is not optional here.** Without it the 184 MB `.venv`
+   uploads with every deploy. With it the payload is 123 KB.
+5. **`maxDuration` in `functions` is unnecessary** — Hobby already defaults to
+   300s, so setting 60 only lowers it. And the `functions` key cannot reference
+   `config/wsgi.py` before the framework preset resolves the entrypoint.
+
+
 Two Vercel projects from this one repo, distinguished only by **Root Directory**:
 
 | Project | Root Directory | What it is |
