@@ -1,0 +1,46 @@
+# Render Blueprint. Deploys the Django API only — the frontend lives on Vercel.
+# Dashboard: New > Blueprint > pick this repo. Render reads this file from the
+# repo root and applies `rootDir` per service.
+services:
+  - type: web
+    name: spotter-eld-api
+    runtime: python
+    plan: free
+    rootDir: backend
+
+    # migrate runs at build time. On the free plan the filesystem is rebuilt from
+    # the build artifact on every deploy and restart, so this ships a migrated
+    # (empty) SQLite file and the trips table resets each time. That is expected
+    # for this deployment — see README for the Postgres alternative.
+    buildCommand: pip install -r requirements.txt && python manage.py migrate
+
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2
+
+    healthCheckPath: /api/health/
+
+    envVars:
+      # Match the local interpreter. Render needs a fully qualified version here.
+      - key: PYTHON_VERSION
+        value: 3.14.6
+
+      # Render generates a strong value and keeps it out of the repo.
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+
+      - key: DJANGO_DEBUG
+        value: "0"
+
+      # Set to this service's own hostname, e.g. spotter-eld-api.onrender.com
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+
+      # Required: DEBUG=0 turns off CORS_ALLOW_ALL_ORIGINS, so the Vercel origin
+      # must be listed explicitly or the browser blocks every API call.
+      # Scheme, no trailing slash: https://your-app.vercel.app
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+      # Optional. Unset falls back to the public OSRM demo server, which models a
+      # car; with a key the app uses the ORS driving-hgv truck profile.
+      - key: ORS_API_KEY
+        sync: false

@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* Theme is driven by an attribute rather than the media query alone, so the
+   header toggle can override the OS preference. `main.tsx` stamps the root. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* One colour per duty status, used identically on the map pins, the itinerary
+   chips and the log grid. Consistency across three visualisations is most of
+   what makes an app read as designed rather than assembled. */
+@theme {
+  --color-duty-off: #64748b;
+  --color-duty-sb: #6366f1;
+  --color-duty-d: #10b981;
+  --color-duty-on: #f59e0b;
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+[data-theme="dark"] body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+.leaflet-container { background: transparent; font: inherit; }
+[data-theme="dark"] .leaflet-control-zoom a {
+  @apply bg-slate-800 text-slate-100 border-slate-700;
+}
+[data-theme="dark"] .leaflet-control-attribution {
+  @apply bg-slate-900/80 text-slate-400;
+}
+
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton { @apply relative overflow-hidden bg-slate-200/70 dark:bg-slate-800/70; }
+.skeleton::after {
+  content: '';
+  @apply absolute inset-0 -translate-x-full;
+  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+  animation: shimmer 1.6s infinite;
+}
+[data-theme="dark"] .skeleton::after {
+  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+}
+
+@media print {
+  .no-print { display: none !important; }
+  .print-page { break-after: page; }
+  body { @apply bg-white text-black; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
