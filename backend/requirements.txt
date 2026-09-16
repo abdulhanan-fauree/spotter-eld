@@ -16,6 +16,7 @@ iniconfig==2.3.0
 numpy==2.5.1
 packaging==26.2
 pluggy==1.6.0
+psycopg[binary]==3.3.4
 pycparser==3.0
 Pygments==2.20.0
 pytest==8.4.2

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import urllib.parse
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,21 +29,48 @@ MIDDLEWARE = [
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-        "OPTIONS": {
-            # The three location fields autocomplete concurrently, and each hit
-            # writes to the geo cache. With SQLite's default rollback journal and
-            # no busy timeout that is enough contention to raise "database is
-            # locked" and 500 the request. WAL lets readers and a writer coexist;
-            # the timeout makes competing writers wait rather than fail.
-            "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
-            "timeout": 20,
-        },
+# Vercel injects DATABASE_URL when a Postgres integration is attached to the
+# project. Serverless functions get a read-only filesystem apart from /tmp, and
+# /tmp is per-instance, so SQLite cannot be the production database here: a trip
+# written by the instance handling the POST is invisible to whichever instance
+# serves the follow-up GET. Locally, with DATABASE_URL unset, SQLite stays the
+# zero-setup default and nothing about dev changes.
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+if DATABASE_URL:
+    _db = urllib.parse.urlparse(DATABASE_URL)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": _db.path.lstrip("/"),
+            # Credentials arrive percent-encoded in a URL; Postgres wants them raw.
+            "USER": urllib.parse.unquote(_db.username or ""),
+            "PASSWORD": urllib.parse.unquote(_db.password or ""),
+            "HOST": _db.hostname or "",
+            "PORT": _db.port or "",
+            # Reuse the connection across requests that land on the same warm
+            # instance. A fresh TCP + TLS handshake to Postgres on every request
+            # is the largest avoidable latency in serverless Django.
+            "CONN_MAX_AGE": 600,
+            "OPTIONS": {"sslmode": "require"},
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+            "OPTIONS": {
+                # The three location fields autocomplete concurrently, and each hit
+                # writes to the geo cache. With SQLite's default rollback journal and
+                # no busy timeout that is enough contention to raise "database is
+                # locked" and 500 the request. WAL lets readers and a writer coexist;
+                # the timeout makes competing writers wait rather than fail.
+                "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+                "timeout": 20,
+            },
+        }
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 USE_TZ = True

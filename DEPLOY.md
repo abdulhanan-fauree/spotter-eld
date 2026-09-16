@@ -1,127 +1,132 @@
-# Deploying
+# Deploying — both halves on Vercel (Hobby / free)
 
-Backend (Django API) → Render. Frontend (Vite SPA) → Vercel.
+Two Vercel projects from this one repo, distinguished only by **Root Directory**:
 
-**Do these in order.** Each side needs the other's URL, so the sequence below
-resolves that: deploy the API first, point the frontend at it, then come back and
-allow the frontend's origin through CORS.
-
----
-
-## Step 1 — Backend on Render
-
-Dashboard → **New** → **Blueprint** → select `abdulhanan-fauree/spotter-eld`.
-Render reads [`render.yaml`](render.yaml) and pre-fills everything except the
-values marked `sync: false`, which it prompts for.
-
-| Setting | Value | Source |
+| Project | Root Directory | What it is |
 | --- | --- | --- |
-| Root Directory | `backend` | render.yaml |
-| Build Command | `pip install -r requirements.txt && python manage.py migrate` | render.yaml |
-| Start Command | `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2` | render.yaml |
-| Health Check | `/api/health/` | render.yaml |
-| `PYTHON_VERSION` | `3.14.6` | render.yaml |
-| `DJANGO_SECRET_KEY` | auto-generated | render.yaml |
-| `DJANGO_DEBUG` | `0` | render.yaml |
-| `DJANGO_ALLOWED_HOSTS` | **you enter this** — see below | prompted |
-| `CORS_ALLOWED_ORIGINS` | **leave blank for now** — Step 3 | prompted |
-| `ORS_API_KEY` | optional — see Notes | prompted |
+| `spotter-eld-api` | `backend` | Django, one Python Vercel Function |
+| `spotter-eld-web` | `frontend` | Vite SPA on the CDN |
 
-`DJANGO_ALLOWED_HOSTS` is the service's own hostname, no scheme and no trailing
-slash. If you name the service `spotter-eld-api`, that is:
+Vercel detects Django from `backend/manage.py` and resolves the entrypoint from
+`WSGI_APPLICATION`, so there is no shim file and no `@vercel/python` config.
 
-```
-spotter-eld-api.onrender.com
-```
-
-Verify before moving on:
-
-```bash
-curl https://spotter-eld-api.onrender.com/api/health/
-# {"status":"ok"}
-```
+**Do the steps in order** — each project needs the other's URL.
 
 ---
 
-## Step 2 — Frontend on Vercel
+## Step 0 — Postgres is mandatory, not optional
 
-Dashboard → **Add New** → **Project** → import the same repo.
+SQLite cannot be the production database here, and this is not a preference.
 
-| Setting | Value |
-| --- | --- |
-| Framework Preset | Vite (auto-detected) |
-| **Root Directory** | **`frontend`** — must be set, it is not the repo root |
-| Build Command | `npm run build` (default) |
-| Output Directory | `dist` (default) |
-| Install Command | `npm install` (default) |
+A Vercel function's filesystem is read-only apart from `/tmp`, and `/tmp` is
+per-instance. The app's own flow breaks on that:
 
-Add one environment variable:
+1. `POST /api/trips/` is planned and saved by instance **A**, which returns the
+   full plan. The SPA caches it and routes to `/trips/5`.
+2. React Query then background-refetches `GET /api/trips/5/`, which may land on
+   instance **B**, whose database has never seen trip 5 → **404**.
+3. [`Results.tsx`](frontend/src/pages/Results.tsx) branches on `error || !trip`,
+   so the rendered plan is *replaced* by "Could not load this trip".
+
+The result would be an app that intermittently discards a plan it just showed
+you. Postgres removes the failure entirely.
+
+**Provision it:** backend project → **Storage** → **Marketplace** → **Neon**
+(free tier) → attach to the project. Vercel injects `DATABASE_URL` into the
+project's environment automatically — you never copy the credential by hand.
+
+`settings.py` reads `DATABASE_URL` if present and falls back to SQLite when it is
+absent, so local development is unaffected and needs no database of its own.
+
+> Prefer Neon's **pooled** connection string if it offers both. Serverless scales
+> to many short-lived instances, and a direct endpoint exhausts Postgres
+> connection slots faster than a pooler does.
+
+---
+
+## Step 1 — Backend project
+
+Import the repo → set **Root Directory** to `backend`.
+
+Everything else comes from [`backend/vercel.json`](backend/vercel.json):
+`buildCommand` runs `migrate --noinput`, and the function gets
+`maxDuration: 60` with tests and `db.sqlite3` excluded from the bundle.
+Python is pinned to 3.14 by [`backend/.python-version`](backend/.python-version).
+
+Environment variables:
 
 | Key | Value |
 | --- | --- |
-| `VITE_API_BASE` | `https://spotter-eld-api.onrender.com/api` |
+| `DATABASE_URL` | injected by Neon — do not set by hand |
+| `DJANGO_SECRET_KEY` | a long random string (`python -c "import secrets;print(secrets.token_urlsafe(64))"`) |
+| `DJANGO_DEBUG` | `0` |
+| `DJANGO_ALLOWED_HOSTS` | `spotter-eld-api.vercel.app` (no scheme, no trailing slash) |
+| `CORS_ALLOWED_ORIGINS` | leave blank until Step 3 |
+| `ORS_API_KEY` | optional — see Notes |
 
-Three things that bite here:
+Verify:
 
-- **The `/api` suffix is required.** [`src/api/client.ts`](frontend/src/api/client.ts)
-  uses `VITE_API_BASE` verbatim as its base, falling back to `/api` only in dev
-  where Vite proxies. Omit the suffix and every request 404s.
-- **No trailing slash** after `/api`.
-- Vite inlines `VITE_*` vars at **build** time, not runtime. Changing this value
-  requires a redeploy to take effect.
+```bash
+curl https://spotter-eld-api.vercel.app/api/health/
+# {"status":"ok"}
+```
+
+If this 500s, check the build log for the `migrate` step — that is where a bad
+`DATABASE_URL` surfaces.
 
 ---
 
-## Step 3 — Back to Render, open up CORS
+## Step 2 — Frontend project
 
-With `DJANGO_DEBUG=0`, `settings.py` sets `CORS_ALLOW_ALL_ORIGINS = DEBUG` →
-`False`. Until you do this step the browser blocks every API call, even though
-`curl` works fine.
+Import the **same repo again** → set **Root Directory** to `frontend`. Framework
+preset is detected as Vite. [`frontend/vercel.json`](frontend/vercel.json)
+already supplies the SPA rewrite that keeps deep links like `/trips/5` from
+404ing.
 
-Render → your service → **Environment** → set:
+| Key | Value |
+| --- | --- |
+| `VITE_API_BASE` | `https://spotter-eld-api.vercel.app/api` |
+
+Three things that bite:
+
+- **The `/api` suffix is required.** [`client.ts`](frontend/src/api/client.ts)
+  uses this value verbatim, falling back to `/api` only in dev where Vite
+  proxies. Omit it and every request 404s.
+- **No trailing slash.**
+- Vite inlines `VITE_*` at **build** time. Changing it requires a redeploy.
+
+---
+
+## Step 3 — CORS, back on the backend project
+
+The two projects are separate origins, so the browser enforces CORS. With
+`DJANGO_DEBUG=0`, `settings.py` sets `CORS_ALLOW_ALL_ORIGINS = DEBUG` → `False`.
+Until this is set, `curl` succeeds while the browser blocks every call — which
+reads as a frontend bug and isn't one.
 
 ```
-CORS_ALLOWED_ORIGINS=https://your-app.vercel.app
+CORS_ALLOWED_ORIGINS=https://spotter-eld-web.vercel.app
 ```
 
-Scheme included, no trailing slash, no path. Save — Render redeploys.
-
-To also allow Vercel preview deployments, add them comma-separated (the setting
-is split on `,`):
-
-```
-CORS_ALLOWED_ORIGINS=https://your-app.vercel.app,https://your-app-git-main-you.vercel.app
-```
-
-Then load the Vercel URL and plan a trip end to end.
+Scheme included, no trailing slash, no path. Redeploy the backend. Add preview
+domains comma-separated if you want them working too.
 
 ---
 
 ## Notes and known limits
 
-**Free-tier cold starts.** Render free web services sleep after ~15 minutes
-idle. The next request takes ~50 seconds while the container wakes. The health
-check does not prevent this. First load after idle looks broken but isn't.
+**Cold starts.** The function bundles numpy plus 65 MB of `timezonefinder`
+timezone data, so a cold invocation is slow (seconds) while a warm one is fast.
+Nothing is broken; the first request after idle just pays the import cost.
 
-**SQLite resets.** The free plan has no persistent disk — the filesystem is
-rebuilt from the build artifact on every deploy and restart, so `migrate` at
-build ships an empty database and saved trips disappear. The geocode cache
-rebuilds itself from Nominatim on demand. To make trips persist, add a Render
-Postgres instance and:
-
-```
-pip install 'psycopg[binary]' dj-database-url   # add both to requirements.txt
-```
-
-then replace `DATABASES` in `backend/config/settings.py` with
-`dj_database_url.config(default=..., conn_max_age=600)`. Render's free Postgres
-is deleted after 30 days.
+**Bundle size.** Runtime dependencies are ~160 MB against a 500 MB limit for
+Python functions, so there is comfortable headroom.
 
 **Car routing, not truck.** With `ORS_API_KEY` unset the app falls back to the
 public OSRM demo server, which models a car. A free
 [OpenRouteService](https://openrouteservice.org/dev/#/signup) key switches it to
-the `driving-hgv` truck profile, which is the correct model for a CMV.
+the `driving-hgv` truck profile, correct for a CMV.
 
-**Migration drift.** `manage.py migrate` warns about an unmade migration for
-`Stop.kind`. It is a `choices=` change only; SQLite does not enforce choices, so
-it has no schema effect. Run `makemigrations` if you want the warning gone.
+**Migration drift.** `migrate` warns about an unmade migration for `Stop.kind`.
+It is a `choices=` change only, with no schema effect. Run `makemigrations` to
+silence it.
