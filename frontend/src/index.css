@@ -47,7 +47,24 @@ body {
 @media print {
   .no-print { display: none !important; }
   .print-page { break-after: page; }
-  body { @apply bg-white text-black; }
+
+  /* Tailwind's dark variant compiles to `[data-theme="dark"] …`, whose
+     specificity (0,1,1) outranks a bare `body` (0,0,1) — and @media adds no
+     specificity, so the dark palette survives into print unless matched here.
+     That matters more than it looks: the log sheet is drawn entirely in
+     `currentColor`, and browsers keep text/stroke colour while dropping
+     background colours, so dark-mode ink prints near-white on white paper and
+     the sheet silently disappears. */
+  body,
+  [data-theme="dark"] body { @apply bg-white text-black; }
+
+  /* Elements that set their own dark-mode colour need pulling back too. The
+     printed form is monochrome by nature, so flattening to black is correct
+     rather than merely expedient. `:where()` keeps this from escalating into a
+     specificity fight with the utilities it overrides. */
+  [data-theme="dark"] :where(h1, h2, h3, p, span, div, li, text, svg) {
+    color: #000 !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

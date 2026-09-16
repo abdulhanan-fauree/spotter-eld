@@ -130,8 +130,11 @@ export default function Results() {
           ))}
         </div>
 
+        {/* `no-print`: the block below renders every sheet for printing, so
+            without this the selected day is emitted twice — once here and once
+            there — and the PDF gains a duplicate page. */}
         {sheet && (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="no-print rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <ELDLogSheet
               className="w-full"
               animate
