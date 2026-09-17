@@ -37,9 +37,9 @@ export function PlanningProgress() {
             key={s.label}
             className={[
               'flex items-center gap-2.5 text-sm transition-colors',
-              active ? 'text-slate-900 dark:text-slate-100' : '',
-              done ? 'text-slate-400 dark:text-slate-500' : '',
-              !done && !active ? 'text-slate-300 dark:text-slate-600' : '',
+              active ? 'text-stone-900 dark:text-stone-100' : '',
+              done ? 'text-stone-400 dark:text-stone-500' : '',
+              !done && !active ? 'text-stone-300 dark:text-stone-600' : '',
             ].join(' ')}
           >
             <span className="flex size-4 items-center justify-center">

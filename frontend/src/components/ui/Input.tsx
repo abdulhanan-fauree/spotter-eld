@@ -11,9 +11,9 @@ export function Input({ invalid, className = '', ...rest }: InputProps) {
       aria-invalid={invalid || undefined}
       className={[
         'w-full rounded-lg border bg-white text-sm outline-none transition',
-        'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20',
-        'dark:bg-slate-900 dark:text-slate-100',
-        invalid ? 'border-red-400 dark:border-red-500' : 'border-slate-300 dark:border-slate-700',
+        'focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20',
+        'dark:bg-stone-900 dark:text-stone-100',
+        invalid ? 'border-red-400 dark:border-red-500' : 'border-stone-300 dark:border-stone-700',
         className,
       ].join(' ')}
       {...rest}

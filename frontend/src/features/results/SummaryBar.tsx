@@ -30,7 +30,7 @@ function Gauge({
   return (
     <div className="flex items-center gap-2.5">
       <svg width="44" height="44" viewBox="0 0 44 44" className="shrink-0 -rotate-90">
-        <circle cx="22" cy="22" r={r} fill="none" strokeWidth="4" className="stroke-slate-200 dark:stroke-slate-700" />
+        <circle cx="22" cy="22" r={r} fill="none" strokeWidth="4" className="stroke-stone-200 dark:stroke-stone-700" />
         <circle
           cx="22"
           cy="22"
@@ -43,12 +43,12 @@ function Gauge({
         />
       </svg>
       <div className="leading-tight">
-        <div className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+        <div className="text-[11px] uppercase tracking-wide text-stone-500 dark:text-stone-400">
           {label}
         </div>
         <div className="text-sm font-semibold tabular-nums">
           {used.toFixed(2)}
-          <span className="text-slate-400"> / {limit}</span>
+          <span className="text-stone-400"> / {limit}</span>
         </div>
       </div>
     </div>
@@ -89,10 +89,10 @@ export function SummaryBar({
   ]
 
   return (
-    <div className="flex flex-wrap items-center gap-x-8 gap-y-4 rounded-xl border border-slate-200 bg-white/80 px-5 py-4 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/70">
+    <div className="flex flex-wrap items-center gap-x-8 gap-y-4 rounded-xl border border-stone-200 bg-white/80 px-5 py-4 shadow-sm backdrop-blur dark:border-stone-800 dark:bg-stone-900/70">
       {stats.map((s) => (
         <div key={s.label} className="leading-tight">
-          <div className="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <div className="text-[11px] uppercase tracking-wide text-stone-500 dark:text-stone-400">
             {s.label}
           </div>
           <div className="text-sm font-semibold tabular-nums">{s.value}</div>
@@ -116,7 +116,7 @@ export function SummaryBar({
       </div>
 
       {provider && (
-        <div className="w-full text-[11px] text-slate-400 dark:text-slate-500">
+        <div className="w-full text-[11px] text-stone-400 dark:text-stone-500">
           Routing: {provider}
           {provider.includes('osrm') && ' — set ORS_API_KEY for the driving-hgv truck profile'}
         </div>

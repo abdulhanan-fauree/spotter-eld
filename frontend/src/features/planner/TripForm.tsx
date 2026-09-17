@@ -120,7 +120,7 @@ function LocationField({
       <div className="relative">
         <Icon
           size={16}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
         />
         <input
           id={id}
@@ -134,18 +134,18 @@ function LocationField({
           placeholder="City, State"
           className={[
             'w-full rounded-lg border bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition',
-            'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20',
-            'dark:bg-slate-900 dark:text-slate-100',
+            'focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20',
+            'dark:bg-stone-900 dark:text-stone-100',
             error
               ? 'border-red-400 dark:border-red-500'
-              : 'border-slate-300 dark:border-slate-700',
+              : 'border-stone-300 dark:border-stone-700',
           ].join(' ')}
         />
       </div>
       {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
 
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <ul className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-stone-200 bg-white py-1 shadow-lg dark:border-stone-700 dark:bg-stone-900">
           {suggestions.map((s, i) => (
             <li key={`${s.lat}-${s.lng}-${i}`}>
               <button
@@ -154,11 +154,11 @@ function LocationField({
                   onChange(s.city_state || s.name)
                   setOpen(false)
                 }}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="block w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
               >
                 <span className="font-medium">{s.city_state || s.name}</span>
                 {s.city_state && (
-                  <span className="ml-2 text-xs text-slate-400">{s.name}</span>
+                  <span className="ml-2 text-xs text-stone-400">{s.name}</span>
                 )}
               </button>
             </li>
@@ -251,7 +251,7 @@ export function TripForm({ onSubmit, pending, error, fieldErrors }: TripFormProp
           <label htmlFor="cycle" className="text-sm font-medium">
             Current cycle used
           </label>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-xs text-stone-500 dark:text-stone-400">
             70 hr / 8 day — Recap box C
           </span>
         </div>
@@ -264,7 +264,7 @@ export function TripForm({ onSubmit, pending, error, fieldErrors }: TripFormProp
             step={0.25}
             value={form.current_cycle_used}
             onChange={(e) => set('current_cycle_used', Number(e.target.value))}
-            className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-slate-200 accent-blue-600 dark:bg-slate-700"
+            className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-stone-200 accent-teal-600 dark:bg-stone-700"
           />
           <input
             type="number"
@@ -273,11 +273,11 @@ export function TripForm({ onSubmit, pending, error, fieldErrors }: TripFormProp
             step={0.25}
             value={form.current_cycle_used}
             onChange={(e) => set('current_cycle_used', Number(e.target.value))}
-            className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900"
+            className="w-20 rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-stone-700 dark:bg-stone-900"
           />
-          <span className="text-sm text-slate-500">hrs</span>
+          <span className="text-sm text-stone-500">hrs</span>
         </div>
-        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-400">
           {remaining.toFixed(2)} hrs available before a 34-hour restart is required.
         </p>
         {fieldError('current_cycle_used') && (
@@ -291,12 +291,12 @@ export function TripForm({ onSubmit, pending, error, fieldErrors }: TripFormProp
         <button
           type="button"
           onClick={() => setDetails((d) => !d)}
-          className="text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+          className="text-xs font-medium text-stone-500 hover:text-stone-900 dark:hover:text-stone-200"
         >
           {details ? '▾' : '▸'} Log sheet details (optional)
         </button>
         {details && (
-          <div className="mt-3 grid gap-3 rounded-lg border border-slate-200 p-4 sm:grid-cols-2 dark:border-slate-800">
+          <div className="mt-3 grid gap-3 rounded-lg border border-stone-200 p-4 sm:grid-cols-2 dark:border-stone-800">
             {(
               [
                 ['driver_name', 'Driver name'],
@@ -310,14 +310,14 @@ export function TripForm({ onSubmit, pending, error, fieldErrors }: TripFormProp
               ] as const
             ).map(([key, label]) => (
               <div key={key}>
-                <label htmlFor={key} className="mb-1 block text-xs text-slate-500">
+                <label htmlFor={key} className="mb-1 block text-xs text-stone-500">
                   {label}
                 </label>
                 <input
                   id={key}
                   value={(form[key] as string) ?? ''}
                   onChange={(e) => set(key, e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-900"
+                  className="w-full rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-teal-500 dark:border-stone-700 dark:bg-stone-900"
                 />
               </div>
             ))}
@@ -334,14 +334,14 @@ export function TripForm({ onSubmit, pending, error, fieldErrors }: TripFormProp
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60 sm:w-auto"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60 sm:w-auto"
       >
         {pending ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />}
         {pending ? 'Planning…' : 'Plan trip'}
       </button>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-        <span className="text-xs text-slate-500">Try a sample:</span>
+      <div className="flex flex-wrap items-center gap-2 border-t border-stone-200 pt-4 dark:border-stone-800">
+        <span className="text-xs text-stone-500">Try a sample:</span>
         {SAMPLES.map((s) => (
           <button
             key={s.label}
@@ -350,10 +350,10 @@ export function TripForm({ onSubmit, pending, error, fieldErrors }: TripFormProp
               setForm(s.value)
               setLocalErrors({})
             }}
-            className="rounded-full border border-slate-300 px-3 py-1 text-xs transition hover:border-blue-500 hover:text-blue-600 dark:border-slate-700"
+            className="rounded-full border border-stone-300 px-3 py-1 text-xs transition hover:border-teal-500 hover:text-teal-600 dark:border-stone-700"
           >
             {s.label}
-            <span className="ml-1.5 text-slate-400">{s.hint}</span>
+            <span className="ml-1.5 text-stone-400">{s.hint}</span>
           </button>
         ))}
       </div>

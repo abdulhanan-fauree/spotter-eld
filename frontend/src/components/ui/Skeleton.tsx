@@ -6,13 +6,13 @@ export function Skeleton({ className = '' }: { className?: string }) {
 
 export function ResultsSkeleton() {
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8" role="status" aria-label="Loading trip">
+    <div className="mx-auto max-w-app px-6 py-8" role="status" aria-label="Loading trip">
       <Skeleton className="h-7 w-96" />
       <Skeleton className="mt-2 h-4 w-56" />
       <Skeleton className="mt-5 h-24 w-full rounded-xl" />
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_1fr]">
         <Skeleton className="h-[460px] rounded-xl" />
-        <div className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+        <div className="space-y-3 rounded-xl border border-stone-200 p-4 dark:border-stone-800">
           {Array.from({ length: 7 }, (_, i) => (
             <div key={i} className="flex items-start gap-3">
               <Skeleton className="size-7 rounded-full" />
