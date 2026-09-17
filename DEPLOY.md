@@ -28,6 +28,17 @@
 5. **`maxDuration` in `functions` is unnecessary** — Hobby already defaults to
    300s, so setting 60 only lowers it. And the `functions` key cannot reference
    `config/wsgi.py` before the framework preset resolves the entrypoint.
+6. **Vercel CLI 59.x creates deployments that never build.** `vercel --prod`
+   uploads, prints an Inspect URL, then spins on *Building…* forever; the
+   dashboard shows the deployment as UNKNOWN with zero builds, and one attempt
+   was refused outright as *Not authorized*. Clearing the queue and the account
+   were not the cause — the same login, same project and same code deployed in
+   45 s with an older CLI. Until the CLI is fixed, pin it:
+   ```bash
+   npx vercel@48 --prod --yes
+   ```
+   Remove any stuck UNKNOWN deployments afterwards with `vercel remove <url>`;
+   they hold the production alias in the listing without ever serving it.
 
 
 Two Vercel projects from this one repo, distinguished only by **Root Directory**:
@@ -90,19 +101,19 @@ Environment variables:
 | `DATABASE_URL` | injected by Neon — do not set by hand |
 | `DJANGO_SECRET_KEY` | a long random string (`python -c "import secrets;print(secrets.token_urlsafe(64))"`) |
 | `DJANGO_DEBUG` | `0` |
-| `DJANGO_ALLOWED_HOSTS` | `spotter-eld-api.vercel.app` (no scheme, no trailing slash) |
+| `DJANGO_ALLOWED_HOSTS` | `spotter-eld-api-cyan.vercel.app` (no scheme, no trailing slash) |
 | `CORS_ALLOWED_ORIGINS` | leave blank until Step 3 |
 | `ORS_API_KEY` | optional — see Notes |
 
 Verify:
 
 ```bash
-curl https://spotter-eld-api.vercel.app/api/health/
-# {"status":"ok"}
+curl https://spotter-eld-api-cyan.vercel.app/api/health/
+# {"status":"ok","database":"ok"}
 ```
 
-If this 500s, check the build log for the `migrate` step — that is where a bad
-`DATABASE_URL` surfaces.
+The health check runs `SELECT 1`, so a bad `DATABASE_URL` shows up here as a
+503 with `"database":"error"` rather than on the first real request.
 
 ---
 
@@ -115,7 +126,7 @@ already supplies the SPA rewrite that keeps deep links like `/trips/5` from
 
 | Key | Value |
 | --- | --- |
-| `VITE_API_BASE` | `https://spotter-eld-api.vercel.app/api` |
+| `VITE_API_BASE` | `https://spotter-eld-api-cyan.vercel.app/api` |
 
 Three things that bite:
 
@@ -157,6 +168,10 @@ public OSRM demo server, which models a car. A free
 [OpenRouteService](https://openrouteservice.org/dev/#/signup) key switches it to
 the `driving-hgv` truck profile, correct for a CMV.
 
-**Migration drift.** `migrate` warns about an unmade migration for `Stop.kind`.
-It is a `choices=` change only, with no schema effect. Run `makemigrations` to
-silence it.
+**Migrations.** CI runs `makemigrations --check`, so a model change without its
+migration fails the Backend workflow before it can reach a deploy.
+
+**CI.** Two GitHub Actions workflows under `.github/workflows/` run on pushes
+and pull requests that touch their half: `backend.yml` (Django checks,
+migrations check, pytest) and `frontend.yml` (lint, type check, vitest,
+production build). Deploys remain manual with the pinned CLI, see gotcha 6.
