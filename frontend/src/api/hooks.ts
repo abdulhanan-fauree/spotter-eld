@@ -10,7 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 
 import { type ApiError, api } from './client'
-import type { Trip, TripInput } from './types'
+import type { Trip, TripInput, TripListRow } from './types'
 
 export const tripKeys = {
   all: ['trips'] as const,
@@ -18,7 +18,7 @@ export const tripKeys = {
 }
 
 export function useTrip(id: string | undefined) {
-  return useQuery({
+  return useQuery<Trip, ApiError>({
     queryKey: tripKeys.detail(id ?? ''),
     queryFn: () => api.getTrip(id!),
     enabled: Boolean(id),
@@ -26,7 +26,7 @@ export function useTrip(id: string | undefined) {
 }
 
 export function useTripHistory() {
-  return useQuery({ queryKey: tripKeys.all, queryFn: api.listTrips })
+  return useQuery<TripListRow[], ApiError>({ queryKey: tripKeys.all, queryFn: api.listTrips })
 }
 
 /** Plans a trip and navigates to it. */
@@ -40,6 +40,29 @@ export function usePlanTrip() {
       queryClient.setQueryData(tripKeys.detail(trip.id), trip)
       queryClient.invalidateQueries({ queryKey: tripKeys.all })
       navigate(`/trips/${trip.id}`)
+    },
+  })
+}
+
+/**
+ * Deletes a trip and drops it from the history list in place.
+ *
+ * The list is edited rather than invalidated so the row disappears the moment
+ * the server confirms, with no refetch flicker. The detail entry is left to
+ * expire on its own: removing it while the Results page still observes it would
+ * trigger a refetch that 404s before the page has navigated away.
+ */
+export function useDeleteTrip() {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, ApiError, number>({
+    // Explicit arrow: React Query passes a context object as the second
+    // argument, which the API function must not see.
+    mutationFn: (id) => api.deleteTrip(id),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<TripListRow[]>(tripKeys.all, (rows) =>
+        rows?.filter((row) => row.id !== id),
+      )
     },
   })
 }
