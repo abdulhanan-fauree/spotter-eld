@@ -1,0 +1,56 @@
+# Frontend CI: lint, type check, unit tests and a production build. Runs only
+# when something under frontend/ (or this file) changes.
+name: Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  check:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Reads engines.node from package.json, the same 22.x Vercel builds with.
+          node-version-file: frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc -b
+
+      - name: Unit tests
+        run: npx vitest run
+
+      - name: Production build
+        # Same value production is built with, so a bad import or env usage
+        # surfaces here rather than in a Vercel build log.
+        run: npm run build
+        env:
+          VITE_API_BASE: https://spotter-eld-api-cyan.vercel.app/api
