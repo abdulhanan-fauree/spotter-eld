@@ -14,7 +14,7 @@
  * the form lives in `./parts`.
  */
 
-import { ROUTE_BLUE } from '@/domain/duty'
+import { ROUTE_INK } from '@/domain/duty'
 
 import { GRID_BOTTOM, L, type Remark, type Segment, hourLabels, hourX } from './grid'
 import { DutyGrid } from './parts/DutyGrid'
@@ -56,7 +56,7 @@ const SHEET_CSS = `
   .log-caption, .log-label, .log-value, .log-title {
     font-family: ui-sans-serif, system-ui, sans-serif;
   }
-  .duty-line  { fill: none; stroke: ${ROUTE_BLUE}; stroke-width: 2.1;
+  .duty-line  { fill: none; stroke: ${ROUTE_INK}; stroke-width: 2.1;
                 stroke-linejoin: miter; stroke-linecap: butt; }
 `
 

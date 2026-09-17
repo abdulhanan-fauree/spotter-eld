@@ -34,14 +34,14 @@ export const DUTY_ROW_NUMBER: Record<DutyStatus, number> = { OFF: 1, SB: 2, D: 3
  * rather than being scattered across four components as they were.
  */
 export const DUTY_COLOR: Record<DutyStatus, string> = {
-  OFF: '#64748b', // slate  — var(--color-duty-off)
-  SB: '#6366f1', // indigo — var(--color-duty-sb)
-  D: '#10b981', // emerald— var(--color-duty-d)
+  OFF: '#78716c', // stone  — var(--color-duty-off)
+  SB: '#8b5cf6', // violet — var(--color-duty-sb)
+  D: '#0d9488', // teal   — var(--color-duty-d)
   ON: '#f59e0b', // amber  — var(--color-duty-on)
 }
 
-/** The drawn duty line, and the route polyline. Blue, as in the FMCSA figures. */
-export const ROUTE_BLUE = '#2563eb'
+/** The drawn duty line and the route polyline: one ink for "where the truck went". */
+export const ROUTE_INK = '#0f766e'
 
 export const isOnDuty = (s: DutyStatus): boolean => s === 'D' || s === 'ON'
 export const isRest = (s: DutyStatus): boolean => s === 'OFF' || s === 'SB'
