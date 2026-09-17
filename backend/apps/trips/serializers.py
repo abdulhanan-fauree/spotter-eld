@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from rest_framework import serializers
 
 from .models import DutySegment, LogDay, LogRemark, RouteLeg, Step, Stop, Trip
@@ -28,6 +30,22 @@ class TripInputSerializer(serializers.Serializer):
     trailer_number = serializers.CharField(required=False, allow_blank=True, max_length=60)
     shipper_commodity = serializers.CharField(required=False, allow_blank=True, max_length=255)
     shipping_doc_no = serializers.CharField(required=False, allow_blank=True, max_length=60)
+
+    def validate_timezone(self, value: str) -> str:
+        """An unknown zone is a client mistake, not something to guess around.
+
+        Blank means "derive it from the origin", which the planner does.
+        """
+        value = value.strip()
+        if not value:
+            return ""
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise serializers.ValidationError(
+                f"Unknown time zone {value!r}. Use an IANA name such as America/Chicago."
+            )
+        return value
 
     def validate(self, attrs):
         if attrs["pickup_location"].strip().lower() == attrs["dropoff_location"].strip().lower():

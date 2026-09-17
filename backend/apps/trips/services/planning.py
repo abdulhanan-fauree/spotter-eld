@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.utils import timezone as dj_timezone
 
 from apps.geo import service as geo
@@ -71,6 +72,15 @@ def _route_legs(origin: Place, pickup: Place, dropoff: Place) -> tuple[Route, Ro
         to_dropoff = geo.route([pickup.latlng, dropoff.latlng], mile_offset=to_pickup.distance_mi)
     except geo.GeoError as exc:
         raise PlanningError(str(exc)) from exc
+
+    total = to_pickup.distance_mi + to_dropoff.distance_mi
+    if total > settings.MAX_TRIP_MILES:
+        # Almost always two same-named places on different continents.
+        raise PlanningError(
+            f"That trip routes to {total:,.0f} miles, beyond the "
+            f"{settings.MAX_TRIP_MILES:,.0f}-mile limit. Check that each location "
+            "is the place you meant."
+        )
     return to_pickup, to_dropoff
 
 

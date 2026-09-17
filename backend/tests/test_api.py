@@ -264,6 +264,121 @@ def test_missing_trip_is_a_404(api):
 
 
 # --------------------------------------------------------------------------- #
+# Deleting a trip
+# --------------------------------------------------------------------------- #
+
+
+def test_delete_removes_the_trip_and_everything_under_it(api, stub_geo):
+    from apps.trips.models import LogDay, Stop, Trip
+
+    created = api.post("/api/trips/", PAYLOAD, format="json").json()
+    assert Trip.objects.filter(pk=created["id"]).exists()
+
+    assert api.delete(f"/api/trips/{created['id']}/").status_code == 204
+
+    assert not Trip.objects.filter(pk=created["id"]).exists()
+    assert not LogDay.objects.filter(trip_id=created["id"]).exists()
+    assert not Stop.objects.filter(trip_id=created["id"]).exists()
+    assert api.get(f"/api/trips/{created['id']}/").status_code == 404
+    assert api.get("/api/trips/").json() == []
+
+
+def test_deleting_a_missing_trip_is_a_404(api):
+    assert api.delete("/api/trips/99999/").status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# Edge cases and hardening
+# --------------------------------------------------------------------------- #
+
+
+def test_unknown_time_zone_is_a_400(api, stub_geo):
+    res = api.post("/api/trips/", PAYLOAD | {"timezone": "Mars/Base"}, format="json")
+    assert res.status_code == 400
+    assert "Mars/Base" in res.json()["timezone"][0]
+
+
+def test_blank_time_zone_means_derive_it_from_the_origin(api, stub_geo):
+    res = api.post("/api/trips/", PAYLOAD | {"timezone": "   "}, format="json")
+    assert res.status_code == 201
+    assert res.json()["timezone"]
+
+
+def test_unknown_api_path_is_a_json_404(api):
+    res = api.get("/api/nothing/here/")
+    assert res.status_code == 404
+    assert res["Content-Type"].startswith("application/json")
+    assert res.json() == {"detail": "No such endpoint."}
+
+
+def test_health_reports_the_database(api):
+    res = api.get("/api/health/")
+    assert res.status_code == 200
+    assert res.json() == {"status": "ok", "database": "ok"}
+
+
+def test_health_is_a_503_when_the_database_is_down(api, monkeypatch):
+    from apps.trips import views
+
+    monkeypatch.setattr(views, "_database_ok", lambda: False)
+    res = api.get("/api/health/")
+    assert res.status_code == 503
+    assert res.json()["database"] == "error"
+
+
+def test_geocode_query_too_long_is_a_400(api):
+    res = api.get("/api/geocode/", {"q": "x" * 201})
+    assert res.status_code == 400
+    assert "q" in res.json()
+
+
+def test_geocode_upstream_failure_is_a_503_not_a_crash(api, monkeypatch):
+    from apps.geo.providers import GeoError
+    from apps.trips import views
+
+    def down(*_args, **_kwargs):
+        raise GeoError("nominatim is down")
+
+    monkeypatch.setattr(views.geo, "suggest", down)
+    res = api.get("/api/geocode/", {"q": "Dallas"})
+    assert res.status_code == 503
+    assert "detail" in res.json()
+
+
+def test_absurdly_long_route_is_refused_as_a_422(api, stub_geo, monkeypatch, settings):
+    from apps.trips.models import Trip
+    from apps.trips.services import planning
+
+    settings.MAX_TRIP_MILES = 5_000
+    monkeypatch.setattr(
+        planning.geo, "route", lambda points, *, mile_offset=0.0: make_route(9_000.0, mile_offset)
+    )
+    res = api.post("/api/trips/", PAYLOAD, format="json")
+    assert res.status_code == 422
+    assert "limit" in res.json()["detail"]
+    assert Trip.objects.count() == 0
+
+
+def test_planning_is_rate_limited_per_client(api, stub_geo, settings, monkeypatch):
+    from django.core.cache import cache
+
+    from apps.trips.throttling import PlanningThrottle
+
+    settings.API_THROTTLING = True
+    monkeypatch.setattr(PlanningThrottle, "rate", "1/min", raising=False)
+    cache.clear()
+    try:
+        assert api.post("/api/trips/", PAYLOAD, format="json").status_code == 201
+        limited = api.post("/api/trips/", PAYLOAD, format="json")
+        assert limited.status_code == 429
+        assert "Retry-After" in limited
+        # Reads are never throttled: the history page must keep working.
+        assert api.get("/api/trips/").status_code == 200
+    finally:
+        cache.clear()
+
+
+# --------------------------------------------------------------------------- #
 # Geocode proxy
 # --------------------------------------------------------------------------- #
 

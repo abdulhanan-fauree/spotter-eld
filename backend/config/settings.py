@@ -86,7 +86,25 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "UNAUTHENTICATED_USER": None,
     "EXCEPTION_HANDLER": "apps.trips.exceptions.api_exception_handler",
+    # Planning fans out to two external services per request, and the geocode
+    # proxy fronts a rate-limited upstream under our User-Agent, so both are
+    # capped per client address. The cache behind the counter is per process,
+    # which on serverless means per warm instance: a soft limit, but enough to
+    # stop a runaway loop in a client from hammering Nominatim.
+    "DEFAULT_THROTTLE_RATES": {
+        "plan": os.environ.get("THROTTLE_PLAN", "20/min"),
+        "geocode": os.environ.get("THROTTLE_GEOCODE", "120/min"),
+    },
 }
+
+# API_THROTTLING=0 switches the limits off. The test suite does this, because it
+# fires far more than twenty plans a minute from one address.
+API_THROTTLING = os.environ.get("API_THROTTLING", "1") != "0"
+
+# A route longer than this is almost always a geocoding mismatch — two places
+# sharing a name on different continents — and planning it would grind through
+# weeks of simulated hours before failing. Refuse early with a readable message.
+MAX_TRIP_MILES = float(os.environ.get("MAX_TRIP_MILES", "10000"))
 
 # --------------------------------------------------------------------------- #
 # External geo services
